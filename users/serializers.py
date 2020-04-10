@@ -11,9 +11,25 @@ class UserPasswordAuthenticationSerializer(serializers.ModelSerializer):
     def create(self, validated_data = None):
         if validated_data == None:
             validated_data = self.validated_data
-        return User(**validated_data)
+
+        return User.objects.get(pk = validated_data['email'])
+
+class UserRetrievalSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(max_length=254)
+
+    class Meta():
+        model = User
+        fields = ['email']
+
+    def create(self, validated_data = None):
+        if validated_data == None:
+            validated_data = self.validated_data
+
+        return User.objects.get(pk = validated_data['email'])
 
 class UserDetailSerializer(serializers.ModelSerializer):
+    token = serializers.PrimaryKeyRelatedField(queryset=Token.objects.all(), required = False)
+
     class Meta():
         model = User
         fields = ['email', 'name', 'password', 'token']
@@ -25,16 +41,14 @@ class UserDetailSerializer(serializers.ModelSerializer):
         return User(**validated_data)
 
 class TokenSerializer(serializers.ModelSerializer):
+    token_string = serializers.CharField(max_length=100)
+
     class Meta():
         model = Token
-        fields = ['user']
+        fields = ['token_string']
 
-class UserTokenAuthenticationSerializer(serializers.Serializer):
-    token = serializers.SlugRelatedField(slug_field = 'token_string', queryset = Token.objects.all())
-    email = serializers.SlugRelatedField(slug_field = 'email', queryset = User.objects.all())
+    def create(self, validated_data = None):
+        if validated_data == None:
+            validated_data = self.validated_data
 
-    def create(self):
-        user_email = self.validated_data['email']
-        user = User.objects.get(pk = user_email.email)
-
-        return user
+        return Token.objects.get(pk = validated_data['token_string'])

@@ -1,9 +1,10 @@
 import datetime
 import random
+import pytz
 
 from django.db import models
 
-TOKEN_VALIDITY_TIME = 10000
+TOKEN_VALIDITY_TIME = 100000000
 
 TOKEN_STRING_LENGTH = 30
 
@@ -11,12 +12,18 @@ class User(models.Model):
     email = models.EmailField(primary_key = True)
     name = models.CharField(max_length = 100)
     password = models.CharField(max_length = 100)
+    # TODO: Check if this cascade is correct.
+    token = models.OneToOneField('Token', on_delete = models.CASCADE)
 
     def is_token_valid(self, token):
-        time_difference_ms = (datetime.datetime.now() - token.last_used).seconds * 1000
-        if (TOKEN_VALIDITY_TIME > time_difference_ms):
-            return True
-        return False
+        if token.token_string != self.token.token_string:
+            return False
+
+        time_difference_ms = (datetime.datetime.now(pytz.UTC) - token.last_used).seconds * 1000
+        if (TOKEN_VALIDITY_TIME < time_difference_ms):
+            return False
+
+        return True
 
     def create_update_token(self):
         current_token = None
@@ -29,10 +36,10 @@ class User(models.Model):
 
             current_token = token
         current_token.update_token()
+        self.token = current_token
 
     
 class Token(models.Model):
-    user = models.OneToOneField(User, on_delete = models.CASCADE)
     last_used = models.DateTimeField(auto_now = True)
     token_string = models.CharField(max_length = 100, primary_key = True)
 

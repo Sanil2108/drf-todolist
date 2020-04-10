@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from users.models import User, Token
-from users.serializers import UserDetailSerializer, TokenSerializer, UserTokenAuthenticationSerializer, UserPasswordAuthenticationSerializer
+from users.serializers import UserDetailSerializer, UserRetrievalSerializer, TokenSerializer, UserPasswordAuthenticationSerializer
 
 '''
 Used to create/delete a user
@@ -13,9 +13,9 @@ class UserDetailView(APIView):
         userDetailSerializer = UserDetailSerializer(data = request.data)
         userDetailSerializer.is_valid(raise_exception = True)
 
-        newUser = userDetailSerializer.save()
-        newUser.save()
+        newUser = userDetailSerializer.create()
         newUser.create_update_token()
+        newUser.save()
 
         return Response(status = status.HTTP_201_CREATED)
     
@@ -23,35 +23,53 @@ class UserDetailView(APIView):
         userDetailSerializer = UserDetailSerializer(data = request.data)
         userDetailSerializer.is_valid(raise_exception = True)
 
-        user = userDetailSerializer.save()
+        user = userDetailSerializer.create()
         user.delete()
 
         return Response(status = status.HTTP_200_OK)
 
 '''
-To authenticate a user
+To authenticate a user using a token
 '''
-class UserAuthenticationView(APIView):
+class UserTokenAuthenticationView(APIView):
+
     def post(self, request):
-        if 'token' in request.data.keys():
-            userTokenAuthenticationSerializer = UserTokenAuthenticationSerializer(data = request.data)
-            userTokenAuthenticationSerializer.is_valid(raise_exception = True)
-            user = userTokenAuthenticationSerializer.create()
+        if 'user' not in request.data:
+            return Response(status = status.HTTP_401_UNAUTHORIZED)
 
-            token = Token.objects.get(pk = userTokenAuthenticationSerializer.validated_data['token'].token_string)
-            if user.is_token_valid(token):
-                return Response(status = status.HTTP_200_OK)
-            else:
-                return Response(status = status.HTTP_401_UNAUTHORIZED)
+        userData = request.data['user']
+        userRetrievalSerializer = UserRetrievalSerializer(data = userData)
+        userRetrievalSerializer.is_valid(raise_exception = True)
+        user = userRetrievalSerializer.create()
 
-        userPasswordAuthenticationSerializer = UserPasswordAuthenticationSerializer(data = request.data)
-        userPasswordAuthenticationSerializer.is_valid(raise_exception = True)
-        user = userPasswordAuthenticationSerializer.create()
+        if 'token' not in request.data.keys():
+            return Response(status = status.HTTP_401_UNAUTHORIZED)
+
+        tokenData = request.data['token']
+        tokenSerializer = TokenSerializer(data = tokenData)
+        tokenSerializer.is_valid(raise_exception = True)
+        token = tokenSerializer.create()
         
-        actualUser = User.objects.get(pk = user.email)
-        if (user.password == actualUser.password):
-            return Response(UserDetailSerializer(actualUser).data, status = status.HTTP_200_OK)
+        if user.is_token_valid(token):
+            return Response(status = status.HTTP_200_OK)
         else:
             return Response(status = status.HTTP_401_UNAUTHORIZED)
 
-        
+
+'''
+To authenticate a user using password
+'''
+class UserPasswordAuthenticationView(APIView):
+
+    def post(self, request):
+        if 'user' not in request.data:
+            return Response(status = status.HTTP_401_UNAUTHORIZED)
+
+        userData = request.data['user']
+        userPasswordAuthenticationSerializer = UserPasswordAuthenticationSerializer(data = userData)
+        userPasswordAuthenticationSerializer.is_valid(raise_exception = True)
+        user = userPasswordAuthenticationSerializer.create()
+
+        userDetailSerializer = UserDetailSerializer(user)
+
+        return Response(userDetailSerializer.data, status = status.HTTP_200_OK)
