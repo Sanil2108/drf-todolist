@@ -1,35 +1,40 @@
 from rest_framework import serializers
 from users.models import User, Token
 
-class UserSerializer(serializers.ModelSerializer):
+class UserPasswordAuthenticationSerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(max_length=254)
+
     class Meta():
         model = User
-        fields = ['email', 'name', 'password']
+        fields = ['email', 'password']
+
+    def create(self, validated_data = None):
+        if validated_data == None:
+            validated_data = self.validated_data
+        return User(**validated_data)
+
+class UserDetailSerializer(serializers.ModelSerializer):
+    class Meta():
+        model = User
+        fields = ['email', 'name', 'password', 'token']
+
+    def create(self, validated_data = None):
+        if validated_data == None:
+            validated_data = self.validated_data
+
+        return User(**validated_data)
 
 class TokenSerializer(serializers.ModelSerializer):
     class Meta():
         model = Token
         fields = ['user']
 
-# A few ways to do this
-# First is to create a class that contains a User and a Token and create a serializer for that
-# Problems that exist here are that the TokenSerializer cannot be created with a Token object in which email is a duplicate. I don't want to have this validation for TokenSerializer
-# Second is to create a serializer that contains a UserSerializer and a TokenSerializer, UserAuthenticationSerializer
-# Third is to extract the user part and the token part in the view itself and use UserSerializer and TokenSerializer independently.
+class UserTokenAuthenticationSerializer(serializers.Serializer):
+    token = serializers.SlugRelatedField(slug_field = 'token_string', queryset = Token.objects.all())
+    email = serializers.SlugRelatedField(slug_field = 'email', queryset = User.objects.all())
 
-# How would password and token work as well? Single serializer UserAuthenticationSerializer would be correct
+    def create(self):
+        user_email = self.validated_data['email']
+        user = User.objects.get(pk = user_email.email)
 
-class UserAuthenticationSerializer(serializers.Serializer):
-    userSerializer = UserSerializer()
-    tokenSerializer = TokenSerializer()
-
-    def validate(self):
-        print('validate called')
-    
-    def create(self, validated_data):
-        print('create called')
-    #     userData = validated_data.pop('user')
-    #     tokenData = validated_data.pop('token')
-
-    #     print(userData)
-    #     print(tokenData)
+        return user
