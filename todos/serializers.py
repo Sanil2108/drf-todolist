@@ -11,7 +11,7 @@ class TodoItemSerializer(serializers.ModelSerializer):
 
     class Meta():
         model = TodoItem
-        fields = ['name', 'description']
+        fields = ['name', 'description', 'done']
 
 
 class TodoListSerializer(serializers.ModelSerializer):

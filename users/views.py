@@ -20,10 +20,10 @@ class UserDetailView(APIView):
         return Response(status = status.HTTP_201_CREATED)
     
     def delete(self, request):
-        userDetailSerializer = UserDetailSerializer(data = request.data)
-        userDetailSerializer.is_valid(raise_exception = True)
+        userPasswordAuthenticationSerializer = UserPasswordAuthenticationSerializer(data = request.data)
+        userPasswordAuthenticationSerializer.is_valid(raise_exception = True)
 
-        user = userDetailSerializer.create()
+        user = userPasswordAuthenticationSerializer.create()
         user.delete()
 
         return Response(status = status.HTTP_200_OK)
