@@ -4,7 +4,7 @@ import pytz
 
 from django.db import models
 
-TOKEN_VALIDITY_TIME = 100000000
+TOKEN_VALIDITY_TIME = 1 * 24 * 60 * 60 * 1000
 
 TOKEN_STRING_LENGTH = 30
 
